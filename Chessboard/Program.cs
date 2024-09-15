@@ -11,7 +11,7 @@ namespace ChessProject
 
             Console.WriteLine("");
 
-            PrintArr(PawnMoves(1, 5));
+            TestMoves(QueenMoves(3, 3));
         }
 
         
@@ -23,6 +23,19 @@ namespace ChessProject
             }
         }
 
+
+        static void TestMoves(List<int[]> moves)
+        {
+            foreach (int[] move in moves)
+            {
+                int Xpos = move[0];
+                int Ypos = move[1];
+
+                chessboard[Xpos, Ypos] = "OO";
+            }
+
+            PrintChessboard();
+        }
 
         static string[,] chessboard = {
             { "wR", "wP", " ", " ", " ", " ", "bP", "bR" },
@@ -48,12 +61,18 @@ namespace ChessProject
             }
         }
 
+        #region Piece Movement
 
-#region Piece Moves
+
+
+        #endregion
+
+
+        #region Piece Legal Moves
 
         static void AddMoves (int startX, int startY, int deltaX, int deltaY, List<int[]> list)
         {
-            char opositeColor = chessboard[startX, startY][0] == 'w' ? 'b' : 'w';
+            char opositeColor = GetOpositeColor(startX, startY);
             
             int currentX = startX;
             int currentY = startY;
@@ -64,14 +83,39 @@ namespace ChessProject
                 currentY += deltaY;
 
                 // Out of bounds
-                if (currentX < 0 || currentX > 7 || currentY < 0 || currentY > 7) { break; }
+                if (!IsValidPosition(currentX, currentY))
+                {
+                    break;
+                }
 
-                string coordinate = chessboard[currentX, currentY];
+                string piece = chessboard[currentX, currentY];
 
-                if (coordinate == " ") { list.Add([currentX, currentY]); }
-                else if (coordinate[0] == opositeColor) { list.Add([currentX, currentY]); break; }
-                else { break; }
+                if (piece == " ")
+                {
+                    list.Add([currentX, currentY]);
+                }
+                else if (piece[0] == opositeColor)
+                {
+                    list.Add([currentX, currentY]);
+                    break;
+                }
+                else
+                {
+                    break;
+                }
             }
+        }
+
+
+        static char GetOpositeColor(int x, int y) 
+        {
+            return chessboard[x, y][0] == 'w' ? 'b' : 'w';
+        }
+
+
+        static bool IsValidPosition (int x, int y)
+        {
+            return x >= 0 && x <= 7 && y >= 0 && y <= 7;
         }
 
 
@@ -80,11 +124,11 @@ namespace ChessProject
             List<int[]> moves = new List<int[]>();
 
             int direction = chessboard[x, y][0] == 'w' ? 1 : -1;
-            char opositeColor = chessboard[x, y][0] == 'w' ? 'b' : 'w';
+            char opositeColor = GetOpositeColor(x, y);
 
             void AddPawnMove (int x, int newY)
             {
-                if (newY >= 0 && newY <= 7 && chessboard[x, newY] == " ")
+                if (IsValidPosition(x, newY) && chessboard[x, newY] == " ")
                 {
                     moves.Add([x, newY]);
                 }
@@ -116,6 +160,56 @@ namespace ChessProject
         }
 
 
+        static List<int[]> KnightMoves(int x, int y)
+        {
+            List<int[]> moves = new List<int[]>();
+
+            char opositeColor = GetOpositeColor(x, y);
+
+            void AddKnightMove (int newX, int newY)
+            {
+                if (IsValidPosition(newX, newY))
+                {
+                    string piece = chessboard[newX, newY];
+                    if (piece == " " || piece[0] == opositeColor) { moves.Add([newX, newY]); }
+                }
+            }
+
+            int[,] knightMovement = {
+                { -2, 1 }, { -1, 2 },
+                { 1, 2 }, { 2, 1 },
+                { -2, -1 }, { -1, -2 },
+                { 1, -2 }, { 2, -1 },
+            };
+
+            for (int i = 0; i < knightMovement.GetLength(0); i++)
+            {
+                int newX = x + knightMovement[i, 0];
+                int newY = y + knightMovement[i, 1];
+
+                AddKnightMove(newX, newY);
+            }
+
+            return moves;
+        }
+
+
+        static List<int[]> BishopMoves(int x, int y)
+        {
+            List<int[]> moves = new List<int[]>();
+
+            // Add one diagonal moves
+            AddMoves(x, y, 1, 1, moves);
+            AddMoves(x, y, -1, -1, moves);
+
+            // Add other diagonal moves
+            AddMoves(x, y, -1, 1, moves);
+            AddMoves(x, y, 1, -1, moves);
+
+            return moves;
+        }
+
+
         static List<int[]> RookMoves(int x, int y) {
             List<int[]> moves = new List<int[]>();
 
@@ -131,26 +225,30 @@ namespace ChessProject
         }
 
 
-        static List<int[]> OLDWhitePawnMoves(int x, int y)
+        static List<int[]> QueenMoves(int x, int y)
         {
             List<int[]> moves = new List<int[]>();
 
-            // out of bound
-            if (y == 7) { return moves; }
+            // Add movement for vertical direction
+            AddMoves(x, y, 0, 1, moves);
+            AddMoves(x, y, 0, -1, moves);
 
-            // pawn hasn't moved
-            if (y == 1 & chessboard[x, y + 2] == " ") { moves.Add([x, y + 2]); }
+            // Add movement for horizontal direction
+            AddMoves(x, y, 1, 0, moves);
+            AddMoves(x, y, -1, 0, moves);
 
-            // pawn move
-            if (chessboard[x, y + 1] == " ") { moves.Add([x, y + 1]); }
+            // Add one diagonal moves
+            AddMoves(x, y, 1, 1, moves);
+            AddMoves(x, y, -1, -1, moves);
 
-            // pawn capture
-            if (x < 7 & chessboard[x + 1, y + 1][0] == 'b') { moves.Add([x + 1, y + 1]); }
-            if (x > 0 & chessboard[x - 1, y + 1][0] == 'b') { moves.Add([x - 1, y + 1]); }
+            // Add other diagonal moves
+            AddMoves(x, y, -1, 1, moves);
+            AddMoves(x, y, 1, -1, moves);
 
             return moves;
         }
 
-#endregion
+    #endregion
+
     }
 }
